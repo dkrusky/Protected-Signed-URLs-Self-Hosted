@@ -95,6 +95,7 @@ The only requirement in this regard, is that the files are located in the same f
 |expires|The time (in minutes) for how long the generated link should be valid for|
 
 _Returns_
+
 |type|result|
 |---|---|
 |string|Full url with attached query string parameters for the time the link expires, and the hash/signature.|
@@ -115,6 +116,7 @@ _Returns_
 |url|The full url to verify, including all attached query parameters, scheme, and path. Example: `https://www.foo.com/downloads/protectedfile.zip?Expires=1234567&Hash=12345678...`|
 
 _Returns_
+
 |type|result|
 |---|---|
 |boolean|true if signature is valid and expires value hasn't elapsed|

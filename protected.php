@@ -187,6 +187,7 @@ class URLSigner {
 		$port = '';
 		if (($_SERVER['REQUEST_SCHEME'] == 'https' && (int)$_SERVER['SERVER_PORT'] != 443) || ($_SERVER['REQUEST_SCHEME'] == 'http' && (int)$_SERVER['SERVER_PORT'] != 80) ) { $port = ':' . $_SERVER['SERVER_PORT']; }
 		
+		if(!isset($_SERVER['REDIRECT_QUERY_STRING'])) { return ''; }
 		return rtrim(sprintf(
 			'%s://%s%s%s?%s',
 			$_SERVER['REQUEST_SCHEME'],
@@ -199,6 +200,7 @@ class URLSigner {
 	}
 	
 	static function verify($url) {
+		if(trim($url) == '') { return false; }
 		try{
 			/* Parse url for values */
 			$r = (object)parse_url($url);

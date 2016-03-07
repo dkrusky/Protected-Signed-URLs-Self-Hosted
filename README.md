@@ -62,7 +62,7 @@ Generate the Public key
 openssl rsa -in PRIVATE_KEY.pem -outform PEM -pubout -out PUBLIC_KEY.pem
 ```
 
-The entire contents of the files are their respective defines in `protected.php`.  For example:
+The entire contents of the files are their respective defines in `config.inc.php`.  For example:
 
 ```php
 	define('PUBLIC_KEY', '-----BEGIN PUBLIC KEY-----
@@ -78,6 +78,7 @@ p2odV6xQh5Y3TkzFn6quod5loTiSsN1Ue9n9QqPVlQJD9yKiAfeg+YdRMfuYI1Vw
 
 ... is the define for `PUBLIC_KEY.pem`
 
+_NOTE:_ You can place the `PUBLIC_KEY.pem`, and `PRIVATE_KEY.pem` inside the same folder where the script is installed and it will automatically detect them and use them, eliminating the need for the `config.inc.php`. The recommended approach is to embed them directly in the `config.inc.php` file,
 
 #### Where do you put your files ?
 

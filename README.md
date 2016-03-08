@@ -31,6 +31,10 @@ For Apache, you will want to create a new `.htaccess` file in `/var/www/html/dow
 
 ```apacheconf
 Options -Indexes
+<IfModule mod_headers.c>
+	Header Always set Cache-Control "max-age=0, no-cache, no-store, must-revalidate"
+	Header Always set Pragma "no-cache"
+</IfModule>
 <IfModule mod_rewrite.c>
 	RewriteEngine On
 	RewriteRule ^protected.php - [QSA,L]

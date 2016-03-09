@@ -106,10 +106,10 @@ _Returns_
 |string|Full url with attached query string parameters for the time the link expires, and the hash/signature.|
 
 ```php
-	define('URLSIGNINCLUDE', true);
-	require('/path/to/protected.php');
-	
-	$link = URLSigner::sign( 'https://www.foo.com/downloads/protectedfile.zip', 10 );
+define('URLSIGNINCLUDE', true);
+require('/path/to/protected.php');
+
+$link = URLSigner::sign( 'https://www.foo.com/downloads/protectedfile.zip', 10 );
 ```
 
 #### Verifying a Signed Link
@@ -127,13 +127,13 @@ _Returns_
 |boolean|true if signature is valid and expires value hasn't elapsed|
 
 ```php
-	define('URLSIGNINCLUDE', true);
-	require('/path/to/protected.php');
-	
-	$bool = URLSigner::verify( 'https://www.foo.com/downloads/protectedfile.zip?Expires=1234567&Hash=12345678...' );
-	if($bool === false) {
-		echo 'Valid Link';
-	} else {
-		echo 'Invalid Link';
-	}
+define('URLSIGNINCLUDE', true);
+require('/path/to/protected.php');
+
+$bool = URLSigner::verify( 'https://www.foo.com/downloads/protectedfile.zip?Expires=1234567&Hash=12345678...' );
+if($bool === false) {
+	echo 'Valid Link';
+} else {
+	echo 'Invalid Link';
+}
 ```

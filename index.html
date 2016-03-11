@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="UTF-8">
+    <title>Protected &amp; Signed urls (self-hosted) by microvb</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
+    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
+  </head>
+  <body>
+    <section class="page-header">
+      <h1 class="project-name">Protected &amp; Signed urls (self-hosted)</h1>
+      <h2 class="project-tagline">Self hosted signed url&#39;s for protecting downloads, similar to Amazon S3 .</h2>
+      <a href="https://github.com/microvb/Protected-Signed-URLs-Self-Hosted" class="btn">View on GitHub</a>
+      <a href="https://github.com/microvb/Protected-Signed-URLs-Self-Hosted/zipball/master" class="btn">Download .zip</a>
+      <a href="https://github.com/microvb/Protected-Signed-URLs-Self-Hosted/tarball/master" class="btn">Download .tar.gz</a>
+    </section>
+
+    <section class="main-content">
+      <h1>
+<a id="protected-signed-urls-self-hosted" class="anchor" href="#protected-signed-urls-self-hosted" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Protected-Signed-URLs-Self-Hosted</h1>
+
+<p>Self hosted signed url's for protecting downloads, similar to Amazon S3 .</p>
+
+<h3>
+<a id="introduction" class="anchor" href="#introduction" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Introduction</h3>
+
+<p>This project is a drop-in solution for those wishing to have links that expire without incurring the additional unknown surcharge most content delivery networks charge for this service. I started this project as a result of being unable to use Amazons own signing method to create signed links to content on Amazon CloudFront using a CNAME and their free offering of SSL certificates. While this seemed like a great idea at the time, there was a lot of pain involved in sifting through their various API documentation, php libraries, and many hours getting trolled by Google search results on the topic including bucket permissions, cloudfront permissions, OAI, policies, groups, users, all resulting in the same thing that even popular software which Amazon touts somewhere in their api documentation, was a complete waste of time as nothing would generate the links.</p>
+
+<p>After coming to my senses, I decided to call it quits with Amazton CloudFront (and thus s3) and write my own method which uses similar policy-style signing of URL's using a private/public key in the form of certificates to sign and validate the signing. The next problem I faced, was how to deliver large files without consuming all the memory in the system due to the way an <code>fread()</code> - <code>echo</code> loop would work.  That is when I remember XSendFile, an Apache module that does exactly that.</p>
+
+<h3>
+<a id="system-requirements" class="anchor" href="#system-requirements" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>System Requirements</h3>
+
+<ul>
+<li>mod_rewrite</li>
+<li>xsendfile</li>
+<li>php 5.4+</li>
+<li>openssl (may work with other compatible libs but is untested)</li>
+</ul>
+
+<h3>
+<a id="installation-instructions" class="anchor" href="#installation-instructions" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Installation Instructions</h3>
+
+<p>These instructions assume that the system requirements have been met, are installed, and enabled.</p>
+
+<h4>
+<a id="server-configuration" class="anchor" href="#server-configuration" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Server Configuration</h4>
+
+<p>In your websites main configuration file, ensure that the following variables have been set for your specific website. For the purpose of simplifying the documentation, we will use <code>/var/www/html/downloads/</code> as the path where you have this script installed, and <code>/var/www/html/</code> is the server location of your websites root folder.</p>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>XSendFile</td>
+<td>on</td>
+</tr>
+<tr>
+<td>XSendFilePath</td>
+<td>/var/www/html/downloads/</td>
+</tr>
+</tbody>
+</table>
+
+<p>For Apache, you will want to create a new <code>.htaccess</code> file in <code>/var/www/html/downloads/</code> and paste the following into it:</p>
+
+<div class="highlight highlight-source-apache-config"><pre><span class="pl-c1">Options</span> -Indexes
+&lt;<span class="pl-ent">IfModule</span> mod_headers.c&gt;
+    <span class="pl-c1">Header</span> Always set Cache-Control <span class="pl-s"><span class="pl-pds">"</span>max-age=0, no-cache, no-store, must-revalidate<span class="pl-pds">"</span></span>
+    <span class="pl-c1">Header</span> Always set Pragma <span class="pl-s"><span class="pl-pds">"</span>no-cache<span class="pl-pds">"</span></span>
+&lt;/<span class="pl-ent">IfModule</span>&gt;
+&lt;<span class="pl-ent">IfModule</span> mod_rewrite.c&gt;
+    <span class="pl-c1">RewriteEngine</span> On
+    <span class="pl-c1">RewriteRule</span> <span class="pl-sr">^protected.php</span> <span class="pl-s">-</span> <span class="pl-sr">[QSA,L]</span>
+    <span class="pl-c1">RewriteRule</span> <span class="pl-sr">^(.*)$</span> <span class="pl-s">./protected.php</span> <span class="pl-sr">[QSA,L]</span>
+&lt;/<span class="pl-ent">IfModule</span>&gt;</pre></div>
+
+<h4>
+<a id="generating-the-privatepublic-key-pair" class="anchor" href="#generating-the-privatepublic-key-pair" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Generating the Private/Public key pair</h4>
+
+<p>By default, there is a private/public key pair included in the source as the define values for <code>PRIVATE_KEY</code> and <code>PUBLIC_KEY</code> which server no other purpose than to demonstrate the location this information will go, and to provide a quick way to 'test' the suitability of this project for those who have already been through the endless cesspool of broken/defunct projects without wasting too much more time.</p>
+
+<p><strong><em>DO NOT USE THE INCLUDED PRIVATE/PUBLIC KEY IN PRODUCTION</em></strong></p>
+
+<p>Generate the Private key (it will prompt for a password)</p>
+
+<div class="highlight highlight-source-shell"><pre>openssl genrsa -des3 -out PRIVATE_KEY.pem 2048</pre></div>
+
+<p>Remove the password from the Private key (it will prompt for the password you used when generating the private key)</p>
+
+<div class="highlight highlight-source-shell"><pre>openssl genrsa -des3 -out PRIVATE_KEY.pem 2048</pre></div>
+
+<p><strong><em>As always, it is important that you keep your private keys: Private !!!</em></strong></p>
+
+<p>Generate the Public key</p>
+
+<pre><code>openssl rsa -in PRIVATE_KEY.pem -outform PEM -pubout -out PUBLIC_KEY.pem
+</code></pre>
+
+<p>The entire contents of the files are their respective defines in <code>config.inc.php</code>.  For example:</p>
+
+<div class="highlight highlight-text-html-php"><pre><span class="pl-s1">    <span class="pl-c1">define</span>(<span class="pl-s"><span class="pl-pds">'</span>PUBLIC_KEY<span class="pl-pds">'</span></span>, <span class="pl-s"><span class="pl-pds">'</span>-----BEGIN PUBLIC KEY-----</span></span>
+<span class="pl-s1"><span class="pl-s">MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAx6ux0PNiW6QcKqtXxjQJ</span></span>
+<span class="pl-s1"><span class="pl-s">Qrv0D4hLkoHdLzNuwvxSQpwF7YkZ1E7DfGsDUV0hZkc2vuIKIq1wBL/q5BL4lqH2</span></span>
+<span class="pl-s1"><span class="pl-s">fxotBI9VJf7ldYVqywk/5lEDymxog7DmQhUid688xbUCtUUBbZ88jY1x+/rhgf7w</span></span>
+<span class="pl-s1"><span class="pl-s">wHuV95X5Z5dGwXdO8z64DjWqgb8wPIiMHuCxm9/KMm3O9fzrzC80oHzXMmJRZ/tP</span></span>
+<span class="pl-s1"><span class="pl-s">p2odV6xQh5Y3TkzFn6quod5loTiSsN1Ue9n9QqPVlQJD9yKiAfeg+YdRMfuYI1Vw</span></span>
+<span class="pl-s1"><span class="pl-s">4cJ+r2iKAuNs+GtQOW3b1VV8hPQeMSwWShMq8YTm7IAaUaLGEwfMOuBW06OeV+i9</span></span>
+<span class="pl-s1"><span class="pl-s">1wIDAQAB</span></span>
+<span class="pl-s1"><span class="pl-s">-----END PUBLIC KEY-----<span class="pl-pds">'</span></span>);</span></pre></div>
+
+<p>... is the define for <code>PUBLIC_KEY.pem</code></p>
+
+<p><em>NOTE:</em> You can place the <code>PUBLIC_KEY.pem</code>, and <code>PRIVATE_KEY.pem</code> inside the same folder where the script is installed and it will automatically detect them and use them, eliminating the need for the <code>config.inc.php</code>. The recommended approach is to embed them directly in the <code>config.inc.php</code> file,</p>
+
+<h4>
+<a id="where-do-you-put-your-files-" class="anchor" href="#where-do-you-put-your-files-" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Where do you put your files ?</h4>
+
+<p>On the server of course !!!  While there are many solutions that require you to host the files in some obscure location, this does not require any such tactics to be involved due to the way that the files are rendered inaccessible directly through mod_rewrite.</p>
+
+<p>The only requirement in this regard, is that the files are located in the same folder where this script is installed, and that the <code>XSendFilePath</code> as outlined in the <strong>Server Configuration</strong> step is pointed to the right folder. If using multiple installations of this script, then you can simply point XSendFilePath to the base folder of your website.</p>
+
+<h4>
+<a id="generating-a-signed-link" class="anchor" href="#generating-a-signed-link" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Generating a Signed Link</h4>
+
+<p><strong>sign( url , expires)</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>url</td>
+<td>The url to sign. This must be a resource that is protected on your server. The script will generate a signed link for any url, however it can only validate and serve content where it is installed.</td>
+</tr>
+<tr>
+<td>expires</td>
+<td>The time (in minutes) for how long the generated link should be valid for</td>
+</tr>
+</tbody>
+</table>
+
+<p><em>Returns</em></p>
+
+<table>
+<thead>
+<tr>
+<th>type</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>string</td>
+<td>Full url with attached query string parameters for the time the link expires, and the hash/signature.</td>
+</tr>
+</tbody>
+</table>
+
+<div class="highlight highlight-text-html-php"><pre><span class="pl-s1"><span class="pl-c1">define</span>(<span class="pl-s"><span class="pl-pds">'</span>URLSIGNINCLUDE<span class="pl-pds">'</span></span>, <span class="pl-c1">true</span>);</span>
+<span class="pl-s1"><span class="pl-k">require</span>(<span class="pl-s"><span class="pl-pds">'</span>/path/to/protected.php<span class="pl-pds">'</span></span>);</span>
+<span class="pl-s1"></span>
+<span class="pl-s1"><span class="pl-smi">$link</span> <span class="pl-k">=</span> <span class="pl-c1">URLSigner</span><span class="pl-k">::</span>sign( <span class="pl-s"><span class="pl-pds">'</span>https://www.foo.com/downloads/protectedfile.zip<span class="pl-pds">'</span></span>, <span class="pl-c1">10</span> );</span></pre></div>
+
+<h4>
+<a id="verifying-a-signed-link" class="anchor" href="#verifying-a-signed-link" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Verifying a Signed Link</h4>
+
+<p><strong>verify( url )</strong></p>
+
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>url</td>
+<td>The full url to verify, including all attached query parameters, scheme, and path. Example: <code>https://www.foo.com/downloads/protectedfile.zip?Expires=1234567&amp;Hash=12345678...</code>
+</td>
+</tr>
+</tbody>
+</table>
+
+<p><em>Returns</em></p>
+
+<table>
+<thead>
+<tr>
+<th>type</th>
+<th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>boolean</td>
+<td>true if signature is valid and expires value hasn't elapsed</td>
+</tr>
+</tbody>
+</table>
+
+<div class="highlight highlight-text-html-php"><pre><span class="pl-s1"><span class="pl-c1">define</span>(<span class="pl-s"><span class="pl-pds">'</span>URLSIGNINCLUDE<span class="pl-pds">'</span></span>, <span class="pl-c1">true</span>);</span>
+<span class="pl-s1"><span class="pl-k">require</span>(<span class="pl-s"><span class="pl-pds">'</span>/path/to/protected.php<span class="pl-pds">'</span></span>);</span>
+<span class="pl-s1"></span>
+<span class="pl-s1"><span class="pl-smi">$bool</span> <span class="pl-k">=</span> <span class="pl-c1">URLSigner</span><span class="pl-k">::</span>verify( <span class="pl-s"><span class="pl-pds">'</span>https://www.foo.com/downloads/protectedfile.zip?Expires=1234567&amp;Hash=12345678...<span class="pl-pds">'</span></span> );</span>
+<span class="pl-s1"><span class="pl-k">if</span>(<span class="pl-smi">$bool</span> <span class="pl-k">===</span> <span class="pl-c1">false</span>) {</span>
+<span class="pl-s1">    <span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">'</span>Valid Link<span class="pl-pds">'</span></span>;</span>
+<span class="pl-s1">} <span class="pl-k">else</span> {</span>
+<span class="pl-s1">    <span class="pl-c1">echo</span> <span class="pl-s"><span class="pl-pds">'</span>Invalid Link<span class="pl-pds">'</span></span>;</span>
+<span class="pl-s1">}</span></pre></div>
+
+      <footer class="site-footer">
+        <span class="site-footer-owner"><a href="https://github.com/microvb/Protected-Signed-URLs-Self-Hosted">Protected &amp; Signed urls (self-hosted)</a> is maintained by <a href="https://github.com/microvb">microvb</a>.</span>
+
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a> using the <a href="https://github.com/jasonlong/cayman-theme">Cayman theme</a> by <a href="https://twitter.com/jasonlong">Jason Long</a>.</span>
+      </footer>
+
+    </section>
+
+            <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-3935915-2");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>

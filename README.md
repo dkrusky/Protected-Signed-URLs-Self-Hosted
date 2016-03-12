@@ -1,5 +1,3 @@
-|version| |downloads| |license| |issues| |forks| |stars| |ages| |works| |badges|
-
 # Protected-Signed-URLs-Self-Hosted
 Self hosted signed url's for protecting downloads, similar to Amazon S3 .
 

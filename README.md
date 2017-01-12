@@ -55,7 +55,7 @@ openssl genrsa -des3 -out PRIVATE_KEY.pem 2048
 
 Remove the password from the Private key (it will prompt for the password you used when generating the private key)
 ```sh
-openssl genrsa -des3 -out PRIVATE_KEY.pem 2048
+openssl rsa -in PRIVATE_KEY.pem -out PRIVATE_KEY.pem
 ```
 
 **_As always, it is important that you keep your private keys: Private !!!_**
